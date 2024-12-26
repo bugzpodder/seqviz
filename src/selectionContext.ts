@@ -4,6 +4,7 @@ type SelectionTypeEnum =
   | "ANNOTATION"
   | "FIND"
   | "TRANSLATION"
+  | "TRANSLATION_HANDLE"
   | "ENZYME"
   | "SEQ"
   | "AMINOACID"
@@ -25,6 +26,12 @@ export interface Selection {
   start?: number;
   type: SelectionTypeEnum;
   viewer?: "LINEAR" | "CIRCULAR";
+}
+
+export interface ExternalSelection {
+  clockwise?: boolean;
+  end: number;
+  start: number;
 }
 
 /** Initial/default selection */

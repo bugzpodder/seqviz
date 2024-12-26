@@ -15,10 +15,11 @@ import {
   PrimerProp,
   Range,
   SeqType,
+  TranslationProp,
 } from "./elements";
 import { isEqual } from "./isEqual";
 import search from "./search";
-import { Selection } from "./selectionContext";
+import { ExternalSelection, Selection } from "./selectionContext";
 import { complement, directionality, guessType, randomID } from "./sequence";
 
 /** `SeqViz` props. See the README for more details. One of `seq`, `file` or `accession` is required. */
@@ -121,11 +122,7 @@ export interface SeqVizProps {
    * Externally managed selection.
    *
    * If passed, SeqViz uses this prop as the selection range, rather than the internally managed selection */
-  selection?: {
-    clockwise?: boolean;
-    end: number;
-    start: number;
-  };
+  selection?: ExternalSelection;
 
   /** a sequence to render. Can be DNA, RNA, or an amino acid sequence. Setting accession or file overrides this */
   seq?: string;
@@ -150,7 +147,7 @@ export interface SeqVizProps {
   style?: Record<string, unknown>;
 
   /** ranges of sequence that should have amino acid translations shown */
-  translations?: { direction?: number; end: number; start: number }[];
+  translations?: TranslationProp[];
 
   /** the orientation of the viewer(s). "both", the default, has a circular viewer on left and a linear viewer on right. */
   viewer?: "linear" | "circular" | "both" | "both_flip";
@@ -427,7 +424,8 @@ export default class SeqViz extends React.Component<SeqVizProps, SeqVizState> {
     // If the seqType is aa, make the entire sequence the "translation"
     if (seqType === "aa") {
       // TODO: during some grand future refactor, make this cleaner and more transparent to the user
-      translations = [{ direction: 1, end: seq.length, start: 0 }];
+      // Making the name empty so the translation handle doesn't show
+      translations = [{ direction: 1, end: seq.length, start: 0, name: "" }];
     }
 
     // Since all the props are optional, we need to parse them to defaults.
@@ -455,11 +453,16 @@ export default class SeqViz extends React.Component<SeqVizProps, SeqVizState> {
       rotateOnScroll: !!this.props.rotateOnScroll,
       showComplement: (!!compSeq && (typeof showComplement !== "undefined" ? showComplement : true)) || false,
       showIndex: !!showIndex,
-      translations: (translations || []).map((t): { direction: 1 | -1; end: number; start: number } => ({
-        direction: t.direction ? (t.direction < 0 ? -1 : 1) : 1,
-        end: seqType === "aa" ? t.end : t.start + Math.floor((t.end - t.start) / 3) * 3,
-        start: t.start % seq.length,
-      })),
+      translations: (translations || []).map(
+        (t, i): { direction: 1 | -1; end: number; start: number; color: string; id: string; name: string } => ({
+          direction: t.direction ? (t.direction < 0 ? -1 : 1) : 1,
+          end: seqType === "aa" ? t.end : t.start + Math.floor((t.end - t.start) / 3) * 3,
+          start: t.start % seq.length,
+          color: t.color || colorByIndex(i, COLORS),
+          id: `translation${t.name}${i}${t.start}${t.end}`,
+          name: t.name,
+        })
+      ),
       viewer: this.props.viewer || "both",
       zoom: {
         circular: typeof zoom?.circular == "number" ? Math.min(Math.max(zoom.circular, 0), 100) : 0,
